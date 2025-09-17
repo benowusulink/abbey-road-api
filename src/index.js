@@ -219,8 +219,9 @@ app.post("/api/contact-page/send_email", (req,res)=>{
 	  })
 })
 
+const PORT = process.env.PORT || 3001;
 
-app.listen(3001,(req,res)=>{
-	console.log(`server listening on port 3001`);
+app.listen(PORT,(req,res)=>{
+	console.log(`server listening on port ${PORT}`);
 
 })
