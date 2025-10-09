@@ -4,14 +4,201 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 
+const cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs');
+
 const sqlite = require("./database/knex/knex.js").sqlite_db;
 const nodemailer = require("./utilities/nodemailer/nodemailer.js").transporter;
 
 
 app.use(express.static(path.join(__dirname, '../public')));
 
+ app.use(cookieParser());
 app.use(cors())
 app.use(express.json());
+
+app.get("/api/services_page/fetch_anchor_tags",(req,res)=>{
+
+	sqlite('services_page_table')
+	.where({
+		element: 'anchor_tag'
+	})
+	.select('*')
+	.then((data)=>{
+		console.log(data)
+		res.json({
+			success: true,
+			elements:data
+		})
+	})
+	.catch((err)=>{
+		console.log(err)
+		res.json({
+			success: false
+		})
+	})
+
+})
+
+app.get("/api/governance_page/fetch_anchor_tags", (req,res)=>{
+
+	sqlite('governance_page_table')
+	.where({
+		element: 'anchor_tag'
+	})
+	.select('*')
+	.then((data)=>{
+		console.log(data)
+		res.json({
+			success: true,
+			elements:data
+		})
+	})
+	.catch((err)=>{
+		console.log(err)
+		res.json({
+			success: false
+		})
+	})
+})
+
+
+app.get("/api/estates-page/fetch_page_elements", (req,res)=>{
+
+	// transaction to get all values from estate_page_images & estate_page_elements
+	// tables
+	sqlite.transaction((trx) => {
+
+	  const result = {};
+
+	  return trx('estate_page_images')
+	    .select('*')
+	    .from('estate_page_images')
+	    .then((data1) => {
+
+	    	if(data1.length > 0){
+	    		result.estate_page_images = data1;
+	    	}
+	    	else{
+	    		result.estate_page_images = null
+	    	}
+
+	      return trx('estate_page_elements')
+	        .select('*')
+	        .from('estate_page_elements')
+	    })
+	    .then((data2) => {
+
+	    	if(data2.length > 0){
+	    		result.estate_page_elements = data2;
+	    	}
+	    	else{
+	    		result.estate_page_elements = null
+	    	}
+
+	      return result; 
+	    });
+
+	})
+	.then((result) => {
+
+	// check if result exisits,is an object & had two array properties
+	  if (result &&
+	    typeof result === 'object' &&
+	    Array.isArray(result.estate_page_images) &&
+	    Array.isArray(result.estate_page_elements)){
+
+	    res.status(200).json({
+	      success: true,
+	      estate_page: result
+	    });
+	  } 
+	  else {
+
+	    res.status(404).json({
+	      success: true,
+	      estate_page: null
+	    });
+	  }
+	})
+	.catch((err) => {
+
+	  console.error(err);
+
+	  	res.status(404).json({
+	      success: false
+	    });
+	})
+})
+
+app.get("/api/index-page/fetch_page_elements", (req,res)=>{
+
+	sqlite.select('*')
+	.from('index_page_elements_table')
+	.then((elements)=>{
+
+		 if(elements.length > 0 &&
+			Array.isArray(elements) &&
+      	 	typeof elements[0] === 'object' &&
+      		elements[0] !== null){
+
+			// loop through elements from table and categorising them into 
+			// seperate arrays 
+			const a_tag_elements = elements.filter((a_tag_element)=>{
+				if(a_tag_element.section === 'a_tag_elements'){
+					return a_tag_element
+				}
+			})
+
+			const estate_element_text = elements.filter((estate_element)=>{
+				if(estate_element.section === 'estate_elements' &&
+					estate_element.id === "index-section3-article1-div1-h3-p1"){
+					return estate_element
+				}
+		    }).map((estate_element)=>{
+				return estate_element.text
+			})
+
+		    const estate_elements_images = elements.filter((estate_element)=>{
+		    	if(estate_element.section === 'estate_elements' &&
+		    		estate_element.id !== "index-section3-article1-div1-h3-p1"){
+		    			return estate_element
+		    	}
+		    })
+
+			const service_images = elements.filter((service_image)=>{
+				if(service_image.section === "service_images"){
+					return service_image
+				}
+			})
+
+
+			// server response
+			res.status(200).json({
+				success: true,
+				a_tag_elements: a_tag_elements,
+				estate_text: estate_element_text[0],
+				estate_images: estate_elements_images,
+				service_images: service_images
+			})
+		}
+		else{
+			console.log("couldnt find elements from index_page_elements_table")
+			res.status(404).json({
+				success: false
+			})
+		}
+
+	})
+	.catch((err)=>{
+		console.log(err);
+		res.status(404).json({
+			success: false
+		})
+	})
+
+})
+
 
 app.get("/api/index-page/events_and_news",(req,res)=>{
 
@@ -89,25 +276,40 @@ app.get("/api/index-page/events_and_news",(req,res)=>{
 	})
 })
 
-app.get("/api/event_page/fetch_events", (req,res)=>{
+app.get("/api/news&events_page/fetch_news&events", (req,res)=>{
 
-	sqlite.select('*')
-	.from('events_table')
-	.then((events)=>{
-		if(events.length > 0){
-			res.status(200).json({
-				success: true,
-				data: events
-			})
-		}
-		else{
-			res.status(200).json({
-				success: true
-			})
+	sqlite.transaction((trx) => {
+
+	  const result = {};
+
+	  return trx('events_table')
+	    .select('*')
+	    .then((data1) => {
+	      result.events_table = data1;
+	      return trx('news_table')
+	        .select('*')
+	    })
+	    .then((data2) => {
+	      result.news_table = data2;
+	      return result; // return the collected object
+	    });
+
+	})
+	.then((result)=>{
+		if(result &&
+	    typeof result === 'object' &&
+	    Array.isArray(result.events_table) &&
+	    Array.isArray(result.news_table)){
+	    	const resp = {
+	    		success: true,
+				tables: result
+	    	}
+			res.json(resp)
 		}
 	})
 	.catch((err)=>{
-		res.status(404).json({
+		console.log(err)
+		res.json({
 			success: false
 		})
 	})
@@ -219,9 +421,76 @@ app.post("/api/contact-page/send_email", (req,res)=>{
 	  })
 })
 
+app.post("/api/login-page/login_admin", (req,res)=>{
+
+	sqlite('admin_password')
+	.where({
+		id: 1
+	})
+	.select('password','id')
+	.then((dbPassword)=>{
+
+
+
+
+		const comparePassword = 
+		bcrypt.compareSync(req.body.password, dbPassword[0].password);
+
+
+		if(comparePassword){
+
+			if (process.env.NODE_ENV === "production"){
+
+				res.cookie('login_cookie', dbPassword[0].id, {
+				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
+				    secure: true, // https only
+				    domain: 'https://abbey-road-api.onrender.com/',//Specifies the domain for which the cookie is valid
+				    path: '/', //Specifies the path for which the cookie is valid
+				    sameSite: 'Strict', // will only send this cookie with requests originating from website that cookie will be stored in 
+				   	maxAge: 7200000 // 2 hours
+
+				 });
+				res.status(202).json({
+					status: true
+				})
+		
+			}
+			else{
+				res.cookie('login_cookie', dbPassword[0].id, {
+				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
+				    domain: 'localhost',//Specifies the domain for which the cookie is valid
+				    path: '/', //Specifies the path for which the cookie is valid
+				    sameSite: 'Strict', // will only send this cookie with requests originating from website that cookie will be stored in 
+				   	maxAge: 7200000 // 2 hours
+
+				 });
+				res.status(202).json({
+					status: true
+				})
+			}
+
+		}
+		else{
+			res.status(404).json({
+				status: false
+			})
+		}
+	})
+	.catch((err)=>{
+		console.log(err)
+		res.status(404).json({
+			status: false
+		})
+	})
+})
+
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT,(req,res)=>{
-	console.log(`server listening on port ${PORT}`);
-
+app.listen(PORT,()=>{
+	console.log(`app is listening on port ${PORT}`)
 })
+
+
+
+
+
