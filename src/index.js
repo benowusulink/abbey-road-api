@@ -13,7 +13,7 @@ const nodemailer = require("./utilities/nodemailer/nodemailer.js").transporter;
 
 app.use(express.static(path.join(__dirname, '../public')));
 
- app.use(cookieParser());
+app.use(cookieParser());
 app.use(cors())
 app.use(express.json());
 
@@ -315,29 +315,6 @@ app.get("/api/news&events_page/fetch_news&events", (req,res)=>{
 	})
 })
 
-app.get("/api/news_page/fetch_news", (req,res)=>{
-
-	sqlite.select('*')
-	.from('news_table')
-	.then((news)=>{
-		if(news.length > 0){
-			res.status(200).json({
-				success: true,
-				data: news
-			})
-		}
-		else{
-			res.status(200).json({
-				success: true
-			})
-		}
-	})
-	.catch((err)=>{
-		res.status(404).json({
-			success: false
-		})
-	})
-})
 
 app.get("/api/resident-involvment-page/get_all_images", (req,res)=>{
 
@@ -421,27 +398,23 @@ app.post("/api/contact-page/send_email", (req,res)=>{
 	  })
 })
 
-app.post("/api/login-page/login_admin", (req,res)=>{
+app.post("/api/login-page/website_admin_login", (req,res)=>{
 
-	sqlite('admin_password')
-	.where({
-		id: 1
-	})
-	.select('password','id')
-	.then((dbPassword)=>{
+	sqlite.select('*')
+	.from('website_admin')
+	.then((data)=>{
 
-
-
+		console.log(data[0].password)
 
 		const comparePassword = 
-		bcrypt.compareSync(req.body.password, dbPassword[0].password);
+		bcrypt.compareSync(req.body.password, data[0].password);
 
 
 		if(comparePassword){
 
 			if (process.env.NODE_ENV === "production"){
 
-				res.cookie('login_cookie', dbPassword[0].id, {
+				res.cookie('web_admin_cookie', 'web_admin_cookie', {
 				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
 				    secure: true, // https only
 				    domain: 'https://abbey-road-api.onrender.com/',//Specifies the domain for which the cookie is valid
@@ -450,13 +423,13 @@ app.post("/api/login-page/login_admin", (req,res)=>{
 				   	maxAge: 7200000 // 2 hours
 
 				 });
-				res.status(202).json({
+				res.status(200).json({
 					status: true
 				})
 		
 			}
 			else{
-				res.cookie('login_cookie', dbPassword[0].id, {
+				res.cookie('web_admin_cookie', 'web_admin_cookie', {
 				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
 				    domain: 'localhost',//Specifies the domain for which the cookie is valid
 				    path: '/', //Specifies the path for which the cookie is valid
@@ -464,8 +437,69 @@ app.post("/api/login-page/login_admin", (req,res)=>{
 				   	maxAge: 7200000 // 2 hours
 
 				 });
-				res.status(202).json({
+				res.status(200).json({
 					status: true
+				})
+			}
+
+		}
+		else{
+			res.status(404).json({
+				status: false
+			})
+		}
+	})
+	.catch((err)=>{
+		console.log(err)
+		res.status(404).json({
+			status: false
+		})
+	})
+})
+
+app.post("/api/login-page/board_members_login", (req,res)=>{
+
+	sqlite('board_members')
+	.where({
+		username: req.body.username
+	})
+	.select('password')
+	.then((password)=>{
+
+		console.log(password[0].password);
+
+		const comparePassword = 
+		bcrypt.compareSync(req.body.password, password[0].password);
+
+		if(comparePassword){
+
+			if (process.env.NODE_ENV === "production"){
+
+				res.cookie(`board_members_cookie`, `${req.body.username}_login_cookie`, {
+				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
+				    secure: true, // https only
+				    domain: 'https://abbey-road-api.onrender.com/',//Specifies the domain for which the cookie is valid
+				    path: '/', //Specifies the path for which the cookie is valid
+				    sameSite: 'Strict', // will only send this cookie with requests originating from website that cookie will be stored in 
+				   	maxAge: 7200000 // 2 hours
+
+				 });
+				res.status(200).json({
+					status: true
+				})
+		
+			}
+			else{
+				res.cookie(`board_members_cookie`, `${req.body.username}_login_cookie`, {
+				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
+				    domain: 'localhost',//Specifies the domain for which the cookie is valid
+				    path: '/', //Specifies the path for which the cookie is valid
+				    sameSite: 'Strict', // will only send this cookie with requests originating from website that cookie will be stored in 
+				   	maxAge: 7200000 // 2 hours
+
+				 });
+				res.status(200).json({
+					status: true,
 				})
 			}
 
