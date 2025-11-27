@@ -414,29 +414,14 @@ app.post("/api/login-page/website_admin_login", (req,res)=>{
 
 			if (process.env.NODE_ENV === "production"){
 
-				res.cookie('web_admin_cookie', 'web_admin_cookie', {
-				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
-				    secure: true, // https only
-				    domain: 'https://abbey-road-api.onrender.com/',//Specifies the domain for which the cookie is valid
-				    path: '/', //Specifies the path for which the cookie is valid
-				    sameSite: 'Strict', // will only send this cookie with requests originating from website that cookie will be stored in 
-				   	maxAge: 7200000 // 2 hours
 
-				 });
 				res.status(200).json({
 					status: true
 				})
 		
 			}
 			else{
-				res.cookie('web_admin_cookie', 'web_admin_cookie', {
-				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
-				    domain: 'localhost',//Specifies the domain for which the cookie is valid
-				    path: '/', //Specifies the path for which the cookie is valid
-				    sameSite: 'Strict', // will only send this cookie with requests originating from website that cookie will be stored in 
-				   	maxAge: 7200000 // 2 hours
-
-				 });
+	
 				res.status(200).json({
 					status: true
 				})
@@ -475,29 +460,14 @@ app.post("/api/login-page/board_members_login", (req,res)=>{
 
 			if (process.env.NODE_ENV === "production"){
 
-				res.cookie(`board_members_cookie`, `${req.body.username}_login_cookie`, {
-				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
-				    secure: true, // https only
-				    domain: 'https://abbey-road-api.onrender.com/',//Specifies the domain for which the cookie is valid
-				    path: '/', //Specifies the path for which the cookie is valid
-				    sameSite: 'Strict', // will only send this cookie with requests originating from website that cookie will be stored in 
-				   	maxAge: 7200000 // 2 hours
 
-				 });
 				res.status(200).json({
 					status: true
 				})
 		
 			}
 			else{
-				res.cookie(`board_members_cookie`, `${req.body.username}_login_cookie`, {
-				    httpOnly: true, // always inclued stops cookie from being mainuplated in client browser
-				    domain: 'localhost',//Specifies the domain for which the cookie is valid
-				    path: '/', //Specifies the path for which the cookie is valid
-				    sameSite: 'Strict', // will only send this cookie with requests originating from website that cookie will be stored in 
-				   	maxAge: 7200000 // 2 hours
 
-				 });
 				res.status(200).json({
 					status: true,
 				})
@@ -598,7 +568,6 @@ app.post("/api/admin_board_members_page/edit_board_members", (req,res)=>{
 		const salt = bcrypt.genSaltSync(10);
 		const hash = bcrypt.hashSync(req.body.password, salt);
 
-		console.log("hey")
 
 		sqlite('board_members')
 		.where({
