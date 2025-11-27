@@ -518,6 +518,181 @@ app.post("/api/login-page/board_members_login", (req,res)=>{
 	})
 })
 
+// ADMINNNNNN
+
+app.get("/api/admin_board_members_page/fetch_board_members", (req,res)=>{
+
+	sqlite.select('username')
+	.from('board_members')
+	.then((data)=>{
+		console.log(data)
+		res.status(200).json({
+			success:true,
+			board_members: data
+		})
+	})
+	.catch((err)=>{
+		console.log(err)
+		res.status(200).json({
+			success:false,
+			err: err
+		})
+	})
+})
+
+app.post("/api/admin_board_members_page/add_board_members",(req,res)=>{
+
+
+	const salt = bcrypt.genSaltSync(10);
+	const hash = bcrypt.hashSync(req.body.password, salt);
+
+	if(req.body.username.length > 0){
+
+		sqlite('board_members')
+		.returning('username')
+		.insert({
+			username: req.body.username,
+			password: hash
+		})
+		.then((data)=>{
+
+			if(data[0].username === req.body.username){
+				res.status(200).json({
+					success: true
+				})
+			}
+			else{
+				res.status(404).json({
+					success:false
+				})
+			}
+		})
+		.catch((err)=>{
+			if(err.errno === 19){
+				res.status(404).json({
+					success:false,
+					username_exists: true
+				})
+			}
+			else{
+				res.status(404).json({
+					success: false
+				})
+			}
+
+		})
+	}
+	else{
+		res.status(404).json({
+			success:false
+		})
+	}
+
+})
+
+app.post("/api/admin_board_members_page/edit_board_members", (req,res)=>{
+
+	if(req.body.username !== null &&
+		req.body.password !== null){
+
+		const salt = bcrypt.genSaltSync(10);
+		const hash = bcrypt.hashSync(req.body.password, salt);
+
+		console.log("hey")
+
+		sqlite('board_members')
+		.where({
+			username: req.body.old_username
+		})
+		.returning('username')
+		.update({
+			username: req.body.username,
+			password: hash
+		})
+		.then((data)=>{
+			console.log(data)
+			if(data[0].username === req.body.username){
+				res.status(200).json({
+					success: true
+				})
+			}
+			else{
+				res.status(404).json({
+					success: false
+				})	
+			}
+		})
+		.catch((err)=>{
+			console.log(err)
+			res.status(404).json({
+				success: false
+			})	
+		})
+	}
+	else if(req.body.username === null){
+
+		const salt = bcrypt.genSaltSync(10);
+		const hash = bcrypt.hashSync(req.body.password, salt);
+
+		sqlite('board_members')
+		.where({
+			username: req.body.old_username
+		})
+		.returning('username')
+		.update({
+			password: hash
+		})
+		.then((data)=>{
+			console.log(data)
+			if(data[0].username === req.body.old_username){
+				res.status(200).json({
+					success: true
+				})
+			}
+			else{
+				res.status(404).json({
+					success: false
+				})	
+			}
+		})
+		.catch((err)=>{
+			res.status(404).json({
+				success: false
+			})	
+		})
+	}
+	else if(req.body.password === null){
+
+		sqlite('board_members')
+		.where({
+			username: req.body.old_username
+		})
+		.returning('username')
+		.update({
+			username: req.body.username
+		})
+		.then((data)=>{
+			console.log(data)
+			if(data[0].username === req.body.username){
+				res.status(200).json({
+					success: true
+				})
+			}
+			else{
+				res.status(404).json({
+					success: false
+				})	
+			}
+		})
+		.catch((err)=>{
+			res.status(404).json({
+				success: false
+			})	
+		})
+	}
+
+})
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT,()=>{
